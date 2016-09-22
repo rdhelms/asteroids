@@ -4,6 +4,40 @@
     var shipElem = document.getElementById('ship');
 
     // Create your "ship" object and any other variables you might need...
+    var gameWidth = document.documentElement.clientWidth;
+    var gameHeight = document.documentElement.clientHeight;
+
+    var ship = {
+      body: shipElem.style,
+      velocity: 0,
+      angle: 0,
+      x: gameWidth/2,
+      y: gameHeight/2,
+      top: shipElem.getBoundingClientRect().top,
+      left: shipElem.getBoundingClientRect().left,
+      right: shipElem.getBoundingClientRect().right,
+      bottom: shipElem.getBoundingClientRect().bottom,
+      update: function () {
+        this.top = shipElem.getBoundingClientRect().top;
+        this.left = shipElem.getBoundingClientRect().left;
+        this.right = shipElem.getBoundingClientRect().right;
+        this.bottom = shipElem.getBoundingClientRect().bottom;
+      },
+    };
+
+    function Asteroid(detail, top, left, right, bottom) {
+      this.detail = detail;
+      this.top = top;
+      this.left = left;
+      this.right = right;
+      this.bottom = bottom;
+      this.update = function () {
+        this.top = this.detail.getBoundingClientRect().top;
+        this.left = this.detail.getBoundingClientRect().left;
+        this.right = this.detail.getBoundingClientRect().right;
+        this.bottom = this.detail.getBoundingClientRect().bottom;
+      };
+    }
 
 
     var allAsteroids = [];
@@ -12,6 +46,13 @@
         // The new asteroid's HTML element will be in:  event.detail
 
         // What might you need/want to do in here?
+        var newAsteroid = event.detail;
+        var topBorder = newAsteroid.getBoundingClientRect().top;
+        var leftBorder = newAsteroid.getBoundingClientRect().left;
+        var right = newAsteroid.getBoundingClientRect().right;
+        var bottom = newAsteroid.getBoundingClientRect().height;
+        var asteroidObject = new Asteroid(newAsteroid, topBorder, leftBorder, right, bottom);
+        allAsteroids.push(asteroidObject);
 
     });
 
@@ -29,8 +70,49 @@
      */
     function handleKeys(event) {
         console.log(event.keyCode);
-
+        var key = event.keyCode;
         // Implement me!
+        switch (key) {
+          case 37:
+            //Increase angle
+            ship.angle+=20;
+            break;
+          case 38:
+            //Decrease velocity variable, increase velocity in game
+              ship.velocity--;
+            break;
+          case 39:
+            //Decrease angle
+            ship.angle-=20;
+            break;
+          case 40:
+            //Increase velocity variable, decrease velocity in game.
+            // Check to make sure ship can not go backwards
+            if (ship.velocity >= 0) {
+              ship.velocity = 0;
+            } else {
+              ship.velocity++;
+            }
+            break;
+        }
+        console.clear();
+        console.log("Ship velocity: " + ship.velocity);
+        console.log("Ship angle: " + ship.angle);
+        console.log("Ship x: " + ship.x);
+        console.log("Ship y: " + ship.y);
+        console.log("Left of ship: " + ship.body.left);
+        console.log("Top of ship: " + ship.body.top);
+        console.log("Left of ship box: " + ship.left);
+        console.log("Right of ship box: " + ship.right);
+        console.log("Top of ship box: " + ship.top);
+        console.log("Bottom of ship box: " + ship.bottom);
+        console.log("Game width: " + gameWidth);
+        console.log("Game height: " + gameHeight);
+        console.log("Asteroids: " + allAsteroids);
+        console.log("First asteroid's left side: " + allAsteroids[0].left);
+        console.log("First asteroid's right side: " + allAsteroids[0].right);
+        console.log("First asteroid's top: " + allAsteroids[0].top);
+        console.log("First asteroid's bottom: " + allAsteroids[0].bottom);
 
     }
     document.querySelector('body').addEventListener('keyup', handleKeys);
@@ -48,10 +130,33 @@
         // NOTE: you will need to change these arguments to match your ship object!
         // What does this function return? What will be in the `move` variable?
         // Read the documentation!
-        var move = getShipMovement(shipsCurrentVelocity, shipsCurrentAngle);
+        var move = getShipMovement(ship.velocity, ship.angle);
 
+        //Refresh game dimensions in case browser window changes
+        gameWidth = document.documentElement.clientWidth;
+        gameHeight = document.documentElement.clientHeight;
 
         // Move the ship here!
+        if (ship.x < -20) {
+          ship.x = gameWidth;
+        } else if (ship.x > gameWidth + 20) {
+          ship.x = 0;
+        }
+        if (ship.y < -20) {
+          ship.y = gameHeight;
+        } else if (ship.y > gameHeight + 20) {
+          ship.y = 0;
+        }
+        ship.x += move.left;
+        ship.y += move.top;
+
+        ship.body.left = parseFloat(ship.x) + "px";
+        ship.body.top = parseFloat(ship.y) + "px";
+
+
+        var rotateString = "rotate(" + -1*ship.angle + "deg)";
+        ship.body.transform = rotateString;
+
 
 
         // Time to check for any collisions (see below)...
@@ -73,8 +178,15 @@
      * @return void
      */
     function checkForCollisions() {
-
         // Implement me!
+        for (var index = 0; index < allAsteroids.length; index++) {
+          var current = allAsteroids[index];
+          ship.update();
+          current.update();
+          if (current.right > ship.left && current.top < ship.bottom && current.bottom > ship.top && current.left < ship.right) {
+            crash(current.detail);
+          }
+        }
 
     }
 
@@ -88,6 +200,14 @@
         console.log('A crash occurred!');
 
         // What might you need/want to do in here?
+        clearInterval(loopHandle);
+        loopHandle = 0;
+        var main = document.querySelector('main');
+        main.style.color = "white";
+        main.style.fontSize = "5em";
+        main.style.lineHeight = gameHeight+"px";
+        main.style.textAlign = "center";
+        main.innerHTML = "GAME OVER!";
 
     });
 
