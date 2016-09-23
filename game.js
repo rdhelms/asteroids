@@ -7,6 +7,27 @@
     var gameWidth = document.documentElement.clientWidth;
     var gameHeight = document.documentElement.clientHeight;
 
+    //Game timer
+    var timer = 0;
+
+    //Initial display
+    var state = "begin";
+    var main = document.querySelector("main");
+    var display = document.createElement('div');
+    shipElem.style.visibility = "hidden";
+    display.style.position = "absolute";
+    display.style.zIndex = "1";
+    display.style.opacity = "0.5";
+    display.style.top = "50%";
+    display.style.left = "50%";
+    display.style.transform = "translate(-50%, -50%)";
+    display.style.color = "white";
+    display.style.background = "black";
+    display.style.fontSize = "5em";
+    display.style.textAlign = "center";
+    display.innerHTML = "PRESS ENTER TO PLAY";
+    main.appendChild(display);
+
     var ship = {
       body: shipElem.style,
       velocity: 0,
@@ -17,6 +38,7 @@
       left: shipElem.getBoundingClientRect().left,
       right: shipElem.getBoundingClientRect().right,
       bottom: shipElem.getBoundingClientRect().bottom,
+      missileSpeed: 5,
       update: function () {
         this.top = shipElem.getBoundingClientRect().top;
         this.left = shipElem.getBoundingClientRect().left;
@@ -37,6 +59,40 @@
         this.right = this.detail.getBoundingClientRect().right;
         this.bottom = this.detail.getBoundingClientRect().bottom;
       };
+    }
+
+    var allMissiles = [];
+
+    function Missile(detail, x, y, dx, dy, id) {
+      this.detail = detail;
+      this.x = x;
+      this.y = y;
+      this.dx = dx;
+      this.dy = dy;
+      this.id = id;
+      this.top = null;
+      this.left = null;
+      this.right = null;
+      this.bottom = null;
+      this.update = function () {
+        this.x -= this.dx;
+        this.y -= this.dy;
+        this.detail.style.left = parseFloat(this.x) + "px";
+        this.detail.style.top = parseFloat(this.y) + "px";
+        this.top = this.detail.getBoundingClientRect().top;
+        this.left = this.detail.getBoundingClientRect().left;
+        this.right = this.detail.getBoundingClientRect().right;
+        this.bottom = this.detail.getBoundingClientRect().bottom;
+      };
+    }
+
+    //Reset game conditions when player presses enter
+    function resetShip() {
+      ship.body.visibility = "visible";
+      ship.velocity = 0;
+      ship.angle = 0;
+      ship.x = gameWidth/2;
+      ship.y = gameHeight/2;
     }
 
 
@@ -60,6 +116,8 @@
      * Use this function to handle when a key is pressed. Which key? Use the
      * event.keyCode property to know:
      *
+     * 13 = enter
+     * 32 = space
      * 37 = left
      * 38 = up
      * 39 = right
@@ -73,6 +131,32 @@
         var key = event.keyCode;
         // Implement me!
         switch (key) {
+          case 13:
+            if (state == "begin") {
+              resetShip();
+              display.style.visibility = "hidden";
+              state = "play";
+            }
+            break;
+          case 32:
+            if (state == "play") {
+              //Create missile
+              var shotHTML = document.createElement("div");
+              shotHTML.style.position = "absolute";
+              shotHTML.style.width = "4px";
+              shotHTML.style.height = "4px";
+              shotHTML.style.background = "white";
+              main.appendChild(shotHTML);
+              var shotMove = getShipMovement(ship.missileSpeed, ship.angle);
+              var shotX = (ship.left + ship.right)/2;
+              var shotY = (ship.top + ship.bottom)/2;
+              var id = allMissiles.length;
+              var shot = new Missile(shotHTML, shotX, shotY, shotMove.left, shotMove.top, id);
+              allMissiles.push(shot);
+            } else if (state == "over") {
+              location.reload();
+            }
+            break;
           case 37:
             //Increase angle
             ship.angle+=20;
@@ -109,6 +193,7 @@
         console.log("Game width: " + gameWidth);
         console.log("Game height: " + gameHeight);
         console.log("Asteroids: " + allAsteroids);
+        console.log("Missiles: " + allMissiles);
         console.log("First asteroid's left side: " + allAsteroids[0].left);
         console.log("First asteroid's right side: " + allAsteroids[0].right);
         console.log("First asteroid's top: " + allAsteroids[0].top);
@@ -126,41 +211,63 @@
      * @return {void}
      */
     function gameLoop() {
-        // This function for getting ship movement is given to you (at the bottom).
-        // NOTE: you will need to change these arguments to match your ship object!
-        // What does this function return? What will be in the `move` variable?
-        // Read the documentation!
-        var move = getShipMovement(ship.velocity, ship.angle);
+        if (state == "begin") {
 
-        //Refresh game dimensions in case browser window changes
-        gameWidth = document.documentElement.clientWidth;
-        gameHeight = document.documentElement.clientHeight;
+        } else if (state == "play") {
 
-        // Move the ship here!
-        if (ship.x < -20) {
-          ship.x = gameWidth;
-        } else if (ship.x > gameWidth + 20) {
-          ship.x = 0;
+          // This function for getting ship movement is given to you (at the bottom).
+          // NOTE: you will need to change these arguments to match your ship object!
+          // What does this function return? What will be in the `move` variable?
+          // Read the documentation!
+          var move = getShipMovement(ship.velocity, ship.angle);
+
+          //Refresh game dimensions in case browser window changes
+          gameWidth = document.documentElement.clientWidth;
+          gameHeight = document.documentElement.clientHeight;
+
+          // Move the ship here!
+          if (ship.x < -10) {
+            ship.x = gameWidth;
+          } else if (ship.x > gameWidth + 10) {
+            ship.x = 0;
+          }
+          if (ship.y < -10) {
+            ship.y = gameHeight;
+          } else if (ship.y > gameHeight + 10) {
+            ship.y = 0;
+          }
+          ship.x += move.left;
+          ship.y += move.top;
+
+          ship.body.left = parseFloat(ship.x) + "px";
+          ship.body.top = parseFloat(ship.y) + "px";
+
+
+          var rotateString = "rotate(" + -1*ship.angle + "deg)";
+          ship.body.transform = rotateString;
+
+
+
+          // Time to check for any collisions (see below)...
+          checkForCollisions();
+
+          //For scoring
+          timer += 0.02;
+
+          display.style.position = "absolute";
+          display.style.zIndex = "1";
+          display.style.top = "0";
+          display.style.left = "0";
+          display.style.width = "300px";
+          display.style.transform = "translate(0, 0)";
+          display.style.color = "white";
+          display.style.opacity = "0.5";
+          display.style.background = "gray";
+          display.style.fontSize = "3em";
+          display.style.textAlign = "left";
+          display.innerHTML = "Score = " + Math.round(timer) + " Level: " + allAsteroids.length;
+          display.style.visibility = "visible";
         }
-        if (ship.y < -20) {
-          ship.y = gameHeight;
-        } else if (ship.y > gameHeight + 20) {
-          ship.y = 0;
-        }
-        ship.x += move.left;
-        ship.y += move.top;
-
-        ship.body.left = parseFloat(ship.x) + "px";
-        ship.body.top = parseFloat(ship.y) + "px";
-
-
-        var rotateString = "rotate(" + -1*ship.angle + "deg)";
-        ship.body.transform = rotateString;
-
-
-
-        // Time to check for any collisions (see below)...
-        checkForCollisions();
     }
 
     /**
@@ -181,6 +288,19 @@
         // Implement me!
         for (var index = 0; index < allAsteroids.length; index++) {
           var current = allAsteroids[index];
+          for (var missileIndex = 0; missileIndex < allMissiles.length; missileIndex++) {
+            var currentMissile = allMissiles[missileIndex];
+            currentMissile.update();
+            if (allMissiles.length > 5) {
+              var old = allMissiles[0];
+              old.detail.style.display = "none";
+              allMissiles.splice(0,1);
+            }
+            if (current.right > currentMissile.left && current.top < currentMissile.bottom && current.bottom > currentMissile.top && current.left < currentMissile.right) {
+              current.detail.style.display = "none";
+              currentMissile.detail.style.display = "none";
+            }
+          }
           ship.update();
           current.update();
           if (current.right > ship.left && current.top < ship.bottom && current.bottom > ship.top && current.left < ship.right) {
@@ -200,14 +320,31 @@
         console.log('A crash occurred!');
 
         // What might you need/want to do in here?
+
+        //Stop game from looping
         clearInterval(loopHandle);
         loopHandle = 0;
-        var main = document.querySelector('main');
-        main.style.color = "white";
-        main.style.fontSize = "5em";
-        main.style.lineHeight = gameHeight+"px";
-        main.style.textAlign = "center";
-        main.innerHTML = "GAME OVER!";
+
+        //Restart keyup handler
+        document.querySelector('body').addEventListener('keyup', handleKeys);
+
+
+        //Change game state
+        state = "over";
+
+        //Display "GAME OVER!"
+        var final = document.createElement("div");
+        final.style.position = "absolute";
+        final.style.top = gameHeight/2+"px";
+        final.style.left = gameWidth/2+"px";
+        final.style.transform = "translate(-50%, -50%)";
+        final.style.opacity = "0.5";
+        final.style.background = "black";
+        final.style.fontSize = "5em";
+        final.style.color = "white";
+        final.style.textAlign = "center";
+        final.innerHTML = "GAME OVER!<br>Press space to play again";
+        main.appendChild(final);
 
     });
 
